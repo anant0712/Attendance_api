@@ -1,42 +1,22 @@
-# Employee Attendance & Analytics API
+# Employee Attendance API
 
-FastAPI + MongoDB backend for punch-in/out, manual corrections with an audit
-trail, and attendance analytics. All application code is in `app/main.py`.
+This is a backend API for an Employee Attendance Management System, built using Python, FastAPI, and MongoDB.
 
-## Run
+## Project Status (Partial Submission)
+This project is a partial submission. 
 
-```bash
-python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env        # then set MONGO_URI and MONGO_DB
-uvicorn app.main:app --port 8000
-```
+**What is completed:**
+* **Database Setup:** Connected to MongoDB with timezone-aware configurations.
+* **Business Rules (Step 4):** Pure, testable functions for calculating late minutes, overtime, attendance dates, and half-days.
+* **Data Validation (Step 5):** Strict Pydantic models for `EmployeeIn`, `PunchInIn`, `PunchOutIn`, and `RegularizeIn`.
+* **Employee Endpoints (Step 6):** `POST /employees` and `GET /employees` endpoints, including unique database indexing on startup using FastAPI's `lifespan`.
 
-- `MONGO_URI` and `MONGO_DB` are read from environment variables. `.env` is
-  only a local fallback; real environment variables take priority.
-- Requires MongoDB 6.0 or newer.
-- Indexes are created automatically at startup (idempotent).
-- Interactive API docs: http://127.0.0.1:8000/docs
+**What is missing:**
+* `POST /attendance/punch-in` and `POST /attendance/punch-out`
+* `POST /attendance/regularize`
+* Analytics pipelines (Leaderboard and Trends)
 
-## Tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest tests/test_rules.py   # business rules, no database needed
-pytest tests/test_api.py     # needs MongoDB; uses the `attendance_test` database
-```
-
-## Decisions worth knowing
-
-- Instants are stored as BSON dates (UTC) and exposed as epoch milliseconds.
-- Derived fields (work_hours, late_minutes, overtime_minutes, half_day) are
-  stored; analytics read the stored values.
-- Rounding is half-up (Decimal), because MongoDB's `$round` rounds half to even.
-- `moving_avg_7d` averages the unrounded daily rates, then rounds to 4 decimals.
-- Gap filling in the trend uses `$range` + `$unwind` rather than `$densify`.
-
-## Status
-
-All endpoints in the contract are implemented. <Say here what you tested and
-what you did not, e.g. "not tested against MongoDB Atlas", "explain output
-checked only on small data".>
+## How to Run the Project
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
