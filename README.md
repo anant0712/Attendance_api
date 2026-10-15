@@ -20,3 +20,13 @@ This project is a partial submission.
 1. Install dependencies:
    ```bash
    pip install -r requirements.txt
+
+   Start the local MongoDB server on port 27017 (or configure the MONGO_URI environment variable).
+
+2. Run the FastAPI server:
+   ```Bash
+   uvicorn app.main:app --reload
+   
+3. Access the Swagger UI documentation at
+   ```bash
+      http://127.0.0.1:8000/docs to test the endpoints.
