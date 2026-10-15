@@ -4,7 +4,10 @@ I went through the starter `app/main.py` and found a number of issues in the hel
 
 | # | Area | What was wrong | Why it mattered | Fix |
 |---|---|---|---|---|
-| 1 | `health()` | The endpoint always returned `ok` and never actually checked MongoDB. | A readiness probe was lying: the app reported healthy even when MongoDB was down. | The code now pings MongoDB with `client.admin.command("ping")` and returns 503 on `PyMongoError`. |
+| 1 | `GET /employees?page=1` skips the first 20 rows | `GET /employees?page=1&page_size=20` | Skips the first 20 records and shows the next batch of 6 records instead of the first 20. |
+| 2| | `POST /attendance/punch-in` unknown emp_code | `{"emp_code": "string", "punched_at": 100000000000, "status": "PRESENT"}` | Expected a 500 error, but actually received a proper 404 Not Found. |
+| 3 |
+
 | 2 | `MongoClient(...)` | PyMongo was being created without `tz_aware=True`. | That gave naive datetimes, which mix badly with timezone-aware values and create ambiguous timestamps. | The client now uses timezone-aware datetimes, and the API boundary converts values with `as_utc()` and `dt_to_ms()`. |
 | 3 | `create_employee` | The code used a check-then-insert pattern (`find_one` followed by `insert_one`) without a unique index. | Two parallel requests could both pass the check and create duplicate `emp_code` values. | A unique index on `emp_code` was added at startup, and duplicate-key inserts now return 409 instead of creating duplicates. |
 | 4 | `create_employee` | `created_at` was created with `datetime.now()`, which is naive server-local time. The response also serialized it as a datetime string instead of epoch milliseconds. | The timestamp was wrong in timezone terms and didn’t match the API contract. | The app now uses `datetime.now(UTC)` and serializes it with `dt_to_ms()`. |
