@@ -3,9 +3,9 @@ from datetime import datetime, timezone, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import DuplicateKeyError,ConnectionFailure
 from dotenv import load_dotenv
-from datetime import date
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator, model_validator, EmailStr
 from typing import Annotated, Optional, Literal
 from contextlib import asynccontextmanager
@@ -112,7 +112,6 @@ def compute_overtime(punched_out: datetime, date_str: str, shift_start: str, shi
 
 
 def compute_work_hours(punched_in: datetime, punched_out: datetime) -> float:
-    # Rule R5: Total hours worked
     delta_seconds = (punched_out - punched_in).total_seconds()
     return round_half_up(delta_seconds / 3600, 2)
 
@@ -146,7 +145,6 @@ def derive_fields(status: str, punched_in: datetime, punched_out: Optional[datet
 
     return res
 
-# --- Step 5: Request Models ---
 EpochMs = Annotated[int, Field(strict=True, ge=1_000_000_000_000, le=4_102_444_800_000)]
 
 class EmployeeIn(BaseModel):
@@ -217,3 +215,41 @@ def create_employee(emp: EmployeeIn):
 @app.get("/employees")
 def get_employees():
     return list(db.employees.find({}, {"_id": 0}))
+
+@app.post("/attendance/punch-in", status_code=201)
+def punch_in(payload: PunchInIn):
+    # Find the employee to ensure they exist
+    emp = db.employees.find_one({"emp_code": payload.emp_code})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    # Convert the millisecond integer timestamp to a UTC datetime object
+    punch_dt = datetime.fromtimestamp(payload.punched_at / 1000.0, tz=timezone.utc)
+    
+    # Calculating the official attendance date using the datetime object
+    att_date = attendance_date(punch_dt, emp["shift_start"], emp["shift_end"])
+    
+    # Checking if they already punched in for this specific shift
+    existing_record = db.attendance.find_one({
+        "emp_code": payload.emp_code, 
+        "attendance_date": att_date
+    })
+    
+    if existing_record:
+        raise HTTPException(status_code=400, detail="Already punched in for this shift")
+    
+    # Creating the new attendance record
+    new_log = {
+        "emp_code": payload.emp_code,
+        "attendance_date": att_date,
+        "punch_in": payload.punched_at, # Keep original integer for the database
+        "punch_out": None,
+    }
+    
+    try:
+        db.attendance.insert_one(new_log)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="Punch-in race condition detected")
+    
+    new_log.pop("_id", None)
+    return new_log
