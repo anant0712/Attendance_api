@@ -29,4 +29,5 @@ This project is a partial submission.
    
 3. Access the Swagger UI documentation at
    ```bash
-      http://127.0.0.1:8000/docs to test the endpoints.
+      http://127.0.0.1:8000/docs
+to test the endpoints.
