@@ -1,0 +1,10 @@
+.venv/
+venv/
+.idea/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+kit/
+sample_data/
+sample_seed.py
